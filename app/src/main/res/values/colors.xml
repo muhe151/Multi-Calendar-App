@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#FF000000</color>
+
+    <!-- Soft, eye-friendly palette -->
+    <color name="surface">#FFF8F9FC</color>
+    <color name="surface_card">#FFFFFFFF</color>
+    <color name="border_soft">#FFE3E7EF</color>
+    <color name="text_primary">#FF1F2937</color>
+    <color name="text_secondary">#FF6B7280</color>
+    <color name="text_muted">#FF9CA3AF</color>
+
+    <color name="accent_blue">#FF1976D2</color>
+    <color name="accent_soft">#FFE3F2FD</color>
+</resources>

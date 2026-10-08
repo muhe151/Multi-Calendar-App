@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_today"
+        android:title="@string/today"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_gregorian"
+        android:title="@string/gregorian"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_hijri"
+        android:title="@string/hijri"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_ethiopian"
+        android:title="@string/ethiopian"
+        app:showAsAction="never" />
+
+</menu>
