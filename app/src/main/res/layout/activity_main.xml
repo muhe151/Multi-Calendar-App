@@ -27,13 +27,11 @@
             android:id="@+id/tvClock"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
             android:gravity="center"
-            android:paddingTop="0dp"
-            android:paddingBottom="8dp"
+            android:paddingBottom="6dp"
             android:text="--:--:--"
             android:textColor="#E8F0FE"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
@@ -56,29 +54,28 @@
         android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Calendar page — takes only what it needs -->
+        <!-- Calendar -->
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/viewPager"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
-        <!-- Flexible spacer — pushes Dhikr to the middle -->
+        <!-- Top spacer pushes stack to vertical center -->
         <View
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <!-- ⭐ Dhikr — now floating in the middle -->
+        <!-- Dhikr box (centered horizontally) -->
         <LinearLayout
             android:id="@+id/dhikrContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="20dp"
-            android:layout_marginBottom="8dp"
             android:background="@drawable/bg_dhikr"
             android:orientation="vertical"
             android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
+            android:paddingVertical="10dp">
 
             <TextView
                 android:id="@+id/tvDhikrArabic"
@@ -87,28 +84,47 @@
                 android:gravity="center"
                 android:textColor="@color/accent_blue"
                 android:textDirection="rtl"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:text="سُبْحَانَ اللَّهِ" />
+                android:text="\u0633\u064F\u0628\u0652\u062D\u064E\u0627\u0646\u064E \u0627\u0644\u0644\u0651\u064E\u0647\u0650" />
 
             <TextView
                 android:id="@+id/tvDhikrEnglish"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:paddingTop="2dp"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="italic"
                 android:text="Glory be to Allah" />
 
         </LinearLayout>
 
-        <!-- Flexible spacer — balances with the one above -->
+        <!-- ⭐ Prayer Times button — BELOW the Dhikr -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPrayerTimes"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="8dp"
+            android:minWidth="200dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:backgroundTint="#0CAD9E"
+            android:text="🕌 Prayer Times"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="visible"
+            app:cornerRadius="14dp"
+            app:iconTint="#FFFFFF" />
+
+        <!-- Bottom spacer balances the top spacer -->
         <View
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1" />
+            android:layout_weight="2" />
 
     </LinearLayout>
 

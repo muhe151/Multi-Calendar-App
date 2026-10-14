@@ -1,6 +1,8 @@
 package com.example.multicalendar
 
+import android.app.AlertDialog
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.multicalendar.converters.EthiopianConverter
 import com.example.multicalendar.converters.HijriConverter
 import java.util.Calendar
+import java.util.Locale
 
 class CalendarAdapter(
     private val pages: List<CalendarPage>,
@@ -18,6 +21,10 @@ class CalendarAdapter(
     private val onNavigate: (Int, Int) -> Unit
 ) : RecyclerView.Adapter<CalendarAdapter.PageVH>() {
 
+    /**
+     * Called by MainActivity when the user picks a new theme color.
+     * Re-renders all pages so today's circle and Next button update.
+     */
     fun setThemeColor(color: Int) {
         themeColor = color
         notifyDataSetChanged()
@@ -43,16 +50,12 @@ class CalendarAdapter(
         val page = pages[position]
         holder.rvDays.layoutManager = GridLayoutManager(holder.itemView.context, 7)
         val cells = buildCells(page)
-        holder.rvDays.adapter = DayAdapter(cells)
+        holder.rvDays.adapter = DayAdapter(cells, page.type)
 
         when (page.type) {
             CalendarType.GREGORIAN -> {
-                val cal = Calendar.getInstance().apply {
-                    set(page.year, page.month - 1, 1)
-                }
-                val monthName = cal.getDisplayName(
-                    Calendar.MONTH, Calendar.LONG, java.util.Locale.getDefault()
-                )
+                val cal = Calendar.getInstance().apply { set(page.year, page.month - 1, 1) }
+                val monthName = cal.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
                 holder.tvTitle.text = "$monthName ${page.year}"
                 holder.tvSubTitle.text = "Gregorian Calendar"
             }
@@ -70,16 +73,12 @@ class CalendarAdapter(
             }
         }
 
-        // Next button background uses theme color
-        (holder.btnNext.background as? GradientDrawable)?.let { g ->
-            g.setColor(themeColor)
-        } ?: run {
-            val g = GradientDrawable().apply {
-                cornerRadius = 42f
-                setColor(themeColor)
-            }
-            holder.btnNext.background = g
+        // Apply theme color to the Next button
+        val g = GradientDrawable().apply {
+            cornerRadius = 42f
+            setColor(themeColor)
         }
+        holder.btnNext.background = g
 
         holder.btnPrev.setOnClickListener { onNavigate(position, -1) }
         holder.btnNext.setOnClickListener { onNavigate(position, 1) }
@@ -109,10 +108,11 @@ class CalendarAdapter(
             }
         }
 
-        repeat(firstWeekday) { cells.add(DayCell("", false)) }
+        repeat(firstWeekday) { cells.add(DayCell("", false, null)) }
         for (d in 1..totalDays) {
             val isToday = isToday(page, d, today)
-            cells.add(DayCell(d.toString(), isToday))
+            val holiday = HolidayData.getHoliday(page.type, page.month, d)
+            cells.add(DayCell(d.toString(), isToday, holiday))
         }
         return cells
     }
@@ -135,9 +135,7 @@ class CalendarAdapter(
     }
 
     private fun hijriMonthStart(hYear: Int, hMonth: Int): Calendar {
-        val c = Calendar.getInstance().apply { set(2000, 0, 1) }
-        val approxGregYear = hYear + 579
-        c.set(approxGregYear, 0, 1)
+        val c = Calendar.getInstance().apply { set(hYear + 579, 0, 1) }
         val scan = c.clone() as Calendar
         scan.add(Calendar.DAY_OF_YEAR, -400)
         repeat(800) {
@@ -158,10 +156,12 @@ class CalendarAdapter(
         return c
     }
 
-    data class DayCell(val label: String, val isToday: Boolean)
+    data class DayCell(val label: String, val isToday: Boolean, val holiday: String?)
 
-    inner class DayAdapter(private val cells: List<DayCell>) :
-        RecyclerView.Adapter<DayAdapter.DayVH>() {
+    inner class DayAdapter(
+        private val cells: List<DayCell>,
+        private val pageType: CalendarType
+    ) : RecyclerView.Adapter<DayAdapter.DayVH>() {
 
         inner class DayVH(v: View) : RecyclerView.ViewHolder(v) {
             val tvDay: TextView = v.findViewById(R.id.tvDay)
@@ -177,26 +177,56 @@ class CalendarAdapter(
 
         override fun onBindViewHolder(holder: DayVH, position: Int) {
             val c = cells[position]
-            holder.tvDay.text = c.label
+            val tv = holder.tvDay
+            tv.text = c.label
 
             if (c.label.isEmpty()) {
-                // Empty leading cell — no background
-                holder.tvDay.background = null
+                tv.background = null
+                tv.setOnClickListener(null)
                 return
             }
 
-            if (c.isToday) {
-                val bg = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(themeColor)
+            when {
+                c.isToday -> {
+                    tv.background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(themeColor)
+                    }
+                    tv.setTextColor(Color.WHITE)
+                    tv.setTypeface(null, Typeface.BOLD)
                 }
-                holder.tvDay.background = bg
-                holder.tvDay.setTextColor(Color.WHITE)
-                holder.tvDay.setTypeface(null, android.graphics.Typeface.BOLD)
-            } else {
-                holder.tvDay.setBackgroundResource(R.drawable.bg_day_cell)
-                holder.tvDay.setTextColor(0xFF1F2937.toInt())
-                holder.tvDay.setTypeface(null, android.graphics.Typeface.NORMAL)
+                c.holiday != null -> {
+                    val (fill, stroke, txt) = when (pageType) {
+                        CalendarType.GREGORIAN -> Triple(0xFFE3F2FD.toInt(), 0xFF64B5F6.toInt(), 0xFF0D47A1.toInt())
+                        CalendarType.HIJRI -> Triple(0xFFE8F5E9.toInt(), 0xFF66BB6A.toInt(), 0xFF1B5E20.toInt())
+                        CalendarType.ETHIOPIAN -> Triple(0xFFFFEBEE.toInt(), 0xFFEF5350.toInt(), 0xFFB71C1C.toInt())
+                    }
+                    tv.background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(fill)
+                        setStroke(3, stroke)
+                    }
+                    tv.setTextColor(txt)
+                    tv.setTypeface(null, Typeface.BOLD)
+                }
+                else -> {
+                    tv.setBackgroundResource(R.drawable.bg_day_cell)
+                    tv.setTextColor(0xFF1F2937.toInt())
+                    tv.setTypeface(null, Typeface.NORMAL)
+                }
+            }
+
+            tv.setOnClickListener {
+                when {
+                    c.holiday != null -> AlertDialog.Builder(tv.context)
+                        .setTitle(c.holiday)
+                        .setMessage("Holiday on ${c.label}")
+                        .setPositiveButton("OK", null).show()
+                    c.isToday -> AlertDialog.Builder(tv.context)
+                        .setTitle("Today")
+                        .setMessage("You are here")
+                        .setPositiveButton("OK", null).show()
+                }
             }
         }
     }

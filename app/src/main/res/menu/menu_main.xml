@@ -8,6 +8,21 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_font_up"
+        android:title="@string/font_up"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_font_down"
+        android:title="@string/font_down"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_color"
+        android:title="@string/color"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_gregorian"
         android:title="@string/gregorian"
         app:showAsAction="never" />

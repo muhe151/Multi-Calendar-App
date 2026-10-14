@@ -1,16 +1,20 @@
 package com.example.multicalendar
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ObjectAnimator
+import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
-import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.example.multicalendar.converters.EthiopianConverter
@@ -22,28 +26,21 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import android.graphics.Color
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        private const val MENU_TODAY = 1001
-        private const val MENU_GREGORIAN = 1002
-        private const val MENU_HIJRI = 1003
-        private const val MENU_ETHIOPIAN = 1004
-        private const val MENU_FONT_UP = 1005
-        private const val MENU_FONT_DOWN = 1006
-        private const val MENU_COLOR = 1007
-
         private const val PREFS = "calendar_prefs"
         private const val KEY_FONT_SCALE = "font_scale"
         private const val KEY_THEME_COLOR = "theme_color"
 
         private const val DEFAULT_COLOR = 0xFF1976D2.toInt()
 
-        // ⏱ Timing for Dhikr animation
-        private const val DHIKR_VISIBLE_MS = 3500L   // how long each phrase stays
-        private const val DHIKR_FADE_MS = 500L       // fade in/out duration
+        private const val DHIKR_VISIBLE_MS = 3500L
+        private const val DHIKR_FADE_MS = 500L
+
+        private const val ETH_LAT = 9.03
+        private const val ETH_LNG = 38.74
     }
 
     private lateinit var viewPager: ViewPager2
@@ -52,17 +49,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvClock: TextView
     private lateinit var tvDhikrArabic: TextView
     private lateinit var tvDhikrEnglish: TextView
-    private lateinit var dhikrContainer: android.widget.LinearLayout
+    private lateinit var dhikrContainer: LinearLayout
+    private lateinit var btnPrayerTimes: Button
+
     private lateinit var adapter: CalendarAdapter
     private val pages = mutableListOf<CalendarPage>()
     private var themeColor: Int = DEFAULT_COLOR
 
-    // ---------- Clock ----------
     private val clockHandler = Handler(Looper.getMainLooper())
     private val clockRunnable = object : Runnable {
         override fun run() {
             val now = SimpleDateFormat(
-                "EEEE, dd MMM yyyy  •  HH:mm:ss",
+                "EEEE, dd MMM yyyy  |  HH:mm:ss",
                 Locale.getDefault()
             ).format(Date())
             tvClock.text = now
@@ -70,16 +68,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- Dhikr Rotation ----------
     private val dhikrList = listOf(
-        "سُبْحَانَ اللَّهِ"                        to "Glory be to Allah",
-        "الْحَمْدُ لِلَّهِ"                        to "All praise is for Allah",
-        "اللَّهُ أَكْبَرُ"                         to "Allah is the Greatest",
-        "لَا إِلَٰهَ إِلَّا اللَّهُ"                to "There is no god but Allah",
-        "أَسْتَغْفِرُ اللَّهَ"                     to "I seek forgiveness from Allah",
-        "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ" to "There is no power except with Allah",
-        "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"     to "In the name of Allah, the Most Merciful",
-        "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ"           to "O Allah, send blessings upon Muhammad"
+        "\u0633\u064F\u0628\u0652\u062D\u064E\u0627\u0646\u064E \u0627\u0644\u0644\u0651\u064E\u0647\u0650"
+                to "Glory be to Allah",
+        "\u0627\u0644\u0652\u062D\u064E\u0645\u0652\u062F\u064F \u0644\u0650\u0644\u0651\u064E\u0647\u0650"
+                to "All praise is for Allah",
+        "\u0627\u0644\u0644\u0651\u064E\u0647\u064F \u0623\u064E\u0643\u0652\u0628\u064E\u0631\u064F"
+                to "Allah is the Greatest",
+        "\u0644\u064E\u0627 \u0625\u0650\u0644\u064E\u0670\u0647\u064E \u0625\u0650\u0644\u0651\u064E\u0627 \u0627\u0644\u0644\u0651\u064E\u0647\u064F"
+                to "There is no god but Allah",
+        "\u0623\u064E\u0633\u0652\u062A\u064E\u063A\u0652\u0641\u0650\u0631\u064F \u0627\u0644\u0644\u0651\u064E\u0647\u064E"
+                to "I seek forgiveness from Allah"
     )
     private var dhikrIndex = 0
     private val dhikrHandler = Handler(Looper.getMainLooper())
@@ -93,8 +92,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         val savedScale = prefs.getFloat(KEY_FONT_SCALE, 1f)
-        val config = resources.configuration
+        val config = android.content.res.Configuration(resources.configuration)
         config.fontScale = savedScale
+        @Suppress("DEPRECATION")
         resources.updateConfiguration(config, resources.displayMetrics)
 
         super.onCreate(savedInstanceState)
@@ -111,6 +111,7 @@ class MainActivity : AppCompatActivity() {
         tvDhikrArabic = findViewById(R.id.tvDhikrArabic)
         tvDhikrEnglish = findViewById(R.id.tvDhikrEnglish)
         dhikrContainer = findViewById(R.id.dhikrContainer)
+        btnPrayerTimes = findViewById(R.id.btnPrayerTimes)
         viewPager = findViewById(R.id.viewPager)
         tabLayout = findViewById(R.id.tabLayout)
 
@@ -131,19 +132,14 @@ class MainActivity : AppCompatActivity() {
         }.attach()
 
         viewPager.offscreenPageLimit = 3
-        viewPager.setPageTransformer { page, position ->
-            page.alpha = 0.5f + (1 - kotlin.math.abs(position)) * 0.5f
-            page.scaleY = 0.85f + (1 - kotlin.math.abs(position)) * 0.15f
-        }
 
         applyThemeColor(themeColor)
-
-        // Start clock
         clockHandler.post(clockRunnable)
 
-        // Start Dhikr rotation
         loadDhikr(dhikrIndex)
         dhikrHandler.postDelayed(dhikrRunnable, DHIKR_VISIBLE_MS)
+
+        btnPrayerTimes.setOnClickListener { showPrayerTimesDialog() }
     }
 
     override fun onDestroy() {
@@ -152,64 +148,168 @@ class MainActivity : AppCompatActivity() {
         dhikrHandler.removeCallbacks(dhikrRunnable)
     }
 
-    // ---------- DHIKR ANIMATION ----------
+    // ---------------- Dhikr ----------------
 
     private fun loadDhikr(index: Int) {
-        val (arabic, english) = dhikrList[index]
-        tvDhikrArabic.text = arabic
-        tvDhikrEnglish.text = english
+        val p = dhikrList[index]
+        tvDhikrArabic.text = p.first
+        tvDhikrEnglish.text = p.second
     }
 
     private fun animateDhikrTransition() {
-        val fadeOut = ObjectAnimator.ofFloat(dhikrContainer, "alpha", 1f, 0f).apply {
-            duration = DHIKR_FADE_MS
-            interpolator = AccelerateDecelerateInterpolator()
-        }
-        val slideOut = ObjectAnimator.ofFloat(
-            dhikrContainer, "translationX", 0f, -120f
-        ).apply {
-            duration = DHIKR_FADE_MS
-            interpolator = AccelerateDecelerateInterpolator()
-        }
+        val fadeOut = android.animation.ObjectAnimator.ofFloat(
+            dhikrContainer, "alpha", 1f, 0f
+        ).apply { duration = DHIKR_FADE_MS }
+
+        val slideOut = android.animation.ObjectAnimator.ofFloat(
+            dhikrContainer, "translationX", 0f, -150f
+        ).apply { duration = DHIKR_FADE_MS }
 
         fadeOut.start()
         slideOut.start()
 
-        fadeOut.addListener(object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) {
+        fadeOut.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: android.animation.Animator) {
                 dhikrIndex = (dhikrIndex + 1) % dhikrList.size
                 loadDhikr(dhikrIndex)
 
-                // Prepare to slide in from the right
-                dhikrContainer.translationX = 120f
+                dhikrContainer.translationX = 150f
 
-                val fadeIn = ObjectAnimator.ofFloat(
+                android.animation.ObjectAnimator.ofFloat(
                     dhikrContainer, "alpha", 0f, 1f
-                ).apply {
-                    duration = DHIKR_FADE_MS
-                    interpolator = AccelerateDecelerateInterpolator()
-                }
-                val slideIn = ObjectAnimator.ofFloat(
-                    dhikrContainer, "translationX", 120f, 0f
-                ).apply {
-                    duration = DHIKR_FADE_MS
-                    interpolator = AccelerateDecelerateInterpolator()
-                }
-                fadeIn.start()
-                slideIn.start()
+                ).apply { duration = DHIKR_FADE_MS }.start()
+
+                android.animation.ObjectAnimator.ofFloat(
+                    dhikrContainer, "translationX", 150f, 0f
+                ).apply { duration = DHIKR_FADE_MS }.start()
             }
         })
     }
 
-    // ---------- EXISTING METHODS (unchanged) ----------
+    // ---------------- Prayer Times ----------------
+
+    private fun showPrayerTimesDialog() {
+        val today = Calendar.getInstance()
+        val prayers = PrayerTimes.calculate(today, ETH_LAT, ETH_LNG)
+        val now = Calendar.getInstance()
+
+        val header = TextView(this).apply {
+            text = "Prayer Times — Addis Ababa"
+            textSize = 16f
+            setPadding(0, 20, 0, 6)
+            gravity = Gravity.CENTER
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(themeColor)
+        }
+
+        val subHeader = TextView(this).apply {
+            val fmt = SimpleDateFormat("h:mm a, EEEE", Locale.getDefault())
+            text = "Your local time: ${fmt.format(now.time)}"
+            textSize = 12f
+            setPadding(0, 0, 0, 16)
+            gravity = Gravity.CENTER
+            setTextColor(0xFF6B7280.toInt())
+        }
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 0, 40, 30)
+        }
+        container.addView(header)
+        container.addView(subHeader)
+
+        val nextPrayer = prayers.firstOrNull { it.time.after(now) }
+
+        for (p in prayers) {
+            val isNext = (p.name == nextPrayer?.name)
+
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(20, 16, 20, 16)
+            }
+
+            if (isNext) {
+                row.background = GradientDrawable().apply {
+                    cornerRadius = 20f
+                    setColor(themeColor)
+                }
+            }
+
+            val nameView = TextView(this).apply {
+                text = p.name
+                textSize = 15f
+                setTextColor(if (isNext) Color.WHITE else 0xFF1F2937.toInt())
+                setTypeface(null, Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+                )
+            }
+
+            val arabicView = TextView(this).apply {
+                text = p.arabicName
+                textSize = 15f
+                setTextColor(if (isNext) Color.WHITE else themeColor)
+                setPadding(0, 0, 20, 0)
+            }
+
+            val timeView = TextView(this).apply {
+                text = PrayerTimes.format(p)
+                textSize = 15f
+                setTextColor(if (isNext) Color.WHITE else themeColor)
+                setTypeface(null, Typeface.BOLD)
+            }
+
+            row.addView(nameView)
+            row.addView(arabicView)
+            row.addView(timeView)
+            container.addView(row)
+
+            if (p != prayers.last()) {
+                val div = View(this).apply {
+                    setBackgroundColor(0xFFE3E7EF.toInt())
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, 1
+                    )
+                }
+                container.addView(div)
+            }
+        }
+
+        val footer = TextView(this).apply {
+            text = if (nextPrayer != null) {
+                val diff = nextPrayer.time.timeInMillis - now.timeInMillis
+                val h = diff / 3_600_000
+                val m = (diff % 3_600_000) / 60_000
+                "Next: ${nextPrayer.name} at ${PrayerTimes.format(nextPrayer)}  •  in ${h}h ${m}m"
+            } else {
+                "All prayers passed — next is Fajr tomorrow"
+            }
+            textSize = 13f
+            setPadding(0, 24, 0, 0)
+            gravity = Gravity.CENTER
+            setTextColor(0xFF6B7280.toInt())
+            setTypeface(null, Typeface.ITALIC)
+        }
+        container.addView(footer)
+
+        AlertDialog.Builder(this)
+            .setView(container)
+            .setPositiveButton("Close", null)
+            .show()
+    }
+
+    // ---------------- Calendar ----------------
 
     private fun initPages() {
         val today = Calendar.getInstance()
-        pages.add(CalendarPage(
-            CalendarType.GREGORIAN,
-            today.get(Calendar.YEAR),
-            today.get(Calendar.MONTH) + 1
-        ))
+        pages.add(
+            CalendarPage(
+                CalendarType.GREGORIAN,
+                today.get(Calendar.YEAR),
+                today.get(Calendar.MONTH) + 1
+            )
+        )
         val h = HijriConverter.fromGregorian(today)
         pages.add(CalendarPage(CalendarType.HIJRI, h.year, h.month))
         val e = EthiopianConverter.fromGregorian(today)
@@ -227,7 +327,6 @@ class MainActivity : AppCompatActivity() {
 
         pages[pageIndex] = p.copy(year = newYear, month = newMonth)
         adapter.notifyItemChanged(pageIndex)
-
         syncOtherCalendars(pageIndex)
     }
 
@@ -285,17 +384,10 @@ class MainActivity : AppCompatActivity() {
         return c
     }
 
+    // ---------------- Menu ----------------
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, MENU_TODAY, 0, R.string.today)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        menu.add(0, MENU_FONT_UP, 1, R.string.font_up)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        menu.add(0, MENU_FONT_DOWN, 2, R.string.font_down)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        menu.add(0, MENU_COLOR, 3, R.string.color)
-        menu.add(0, MENU_GREGORIAN, 4, R.string.gregorian)
-        menu.add(0, MENU_HIJRI, 5, R.string.hijri)
-        menu.add(0, MENU_ETHIOPIAN, 6, R.string.ethiopian)
+        menuInflater.inflate(R.menu.menu_main, menu)
         return true
     }
 
@@ -304,22 +396,22 @@ class MainActivity : AppCompatActivity() {
             android.R.id.home -> {
                 onBackPressedDispatcher.onBackPressed(); true
             }
-            MENU_TODAY -> {
-                pages.clear()
-                initPages()
+            R.id.action_today -> {
+                pages.clear(); initPages()
                 adapter.notifyDataSetChanged()
-                viewPager.setCurrentItem(0, true)
-                true
+                viewPager.setCurrentItem(0, true); true
             }
-            MENU_GREGORIAN -> { viewPager.setCurrentItem(0, true); true }
-            MENU_HIJRI     -> { viewPager.setCurrentItem(1, true); true }
-            MENU_ETHIOPIAN -> { viewPager.setCurrentItem(2, true); true }
-            MENU_FONT_UP   -> { changeFontScale(1.15f); true }
-            MENU_FONT_DOWN -> { changeFontScale(0.87f); true }
-            MENU_COLOR     -> { showColorPicker(); true }
+            R.id.action_gregorian -> { viewPager.setCurrentItem(0, true); true }
+            R.id.action_hijri -> { viewPager.setCurrentItem(1, true); true }
+            R.id.action_ethiopian -> { viewPager.setCurrentItem(2, true); true }
+            R.id.action_font_up -> { changeFontScale(1.15f); true }
+            R.id.action_font_down -> { changeFontScale(0.87f); true }
+            R.id.action_color -> { showColorPicker(); true }
             else -> super.onOptionsItemSelected(item)
         }
     }
+
+    // ---------------- Font & Color ----------------
 
     private fun changeFontScale(multiplier: Float) {
         val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
@@ -331,22 +423,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun showColorPicker() {
         val colors = arrayOf(
-            "Blue"    to 0xFF1976D2.toInt(),
-            "Green"   to 0xFF388E3C.toInt(),
-            "Purple"  to 0xFF7B1FA2.toInt(),
-            "Red"     to 0xFFD32F2F.toInt(),
-            "Orange"  to 0xFFF57C00.toInt(),
-            "Teal"    to 0xFF00796B.toInt(),
-            "Pink"    to 0xFFC2185B.toInt(),
-            "Indigo"  to 0xFF303F9F.toInt()
+            "Blue" to 0xFF1976D2.toInt(),
+            "Green" to 0xFF388E3C.toInt(),
+            "Purple" to 0xFF7B1FA2.toInt(),
+            "Red" to 0xFFD32F2F.toInt(),
+            "Orange" to 0xFFF57C00.toInt(),
+            "Teal" to 0xFF00796B.toInt(),
+            "Pink" to 0xFFC2185B.toInt(),
+            "Indigo" to 0xFF303F9F.toInt()
         )
         val names = colors.map { it.first }.toTypedArray()
         AlertDialog.Builder(this)
             .setTitle("Choose Theme Color")
             .setItems(names) { _, which ->
                 val color = colors[which].second
-                val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
-                prefs.edit().putInt(KEY_THEME_COLOR, color).apply()
+                getSharedPreferences(PREFS, MODE_PRIVATE)
+                    .edit().putInt(KEY_THEME_COLOR, color).apply()
                 themeColor = color
                 applyThemeColor(color)
                 adapter.setThemeColor(color)
@@ -355,20 +447,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyThemeColor(color: Int) {
+        // Toolbar
         toolbar.setBackgroundColor(color)
-        findViewById<android.view.View>(R.id.appBar).setBackgroundColor(color)
+
+        // Clock background (same blue bar)
+        tvClock.setBackgroundColor(color)
 
         // Tabs
         tabLayout.setBackgroundColor(color)
         tabLayout.setSelectedTabIndicatorColor(Color.WHITE)
 
         // Status bar
+        @Suppress("DEPRECATION")
         window.statusBarColor = color
 
-        // Dhikr text uses accent color
+        // Dhikr accent
         tvDhikrArabic.setTextColor(color)
 
-        // If any page is visible, refresh so buttons pick up new color
+        // Refresh calendar pages so today's circle & buttons pick up the new color
         adapter.setThemeColor(color)
     }
 }

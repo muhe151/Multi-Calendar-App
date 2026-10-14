@@ -11,7 +11,6 @@ object HijriConverter {
             "Jumada al-Ula", "Jumada al-Akhirah", "Rajab", "Sha'ban",
             "Ramadan", "Shawwal", "Dhu al-Qi'dah", "Dhu al-Hijjah"
         )
-        override fun toString(): String = "$day ${monthNames[month - 1]} $year AH"
     }
 
     fun fromGregorian(cal: Calendar): HijriDate {
@@ -50,6 +49,5 @@ object HijriConverter {
         return if (month % 2 == 1) 30 else 29
     }
 
-    private fun isHijriLeap(year: Int): Boolean =
-        ((year * 11 + 14) % 30) < 11
+    private fun isHijriLeap(year: Int): Boolean = ((year * 11 + 14) % 30) < 11
 }

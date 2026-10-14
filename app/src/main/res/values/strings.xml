@@ -1,13 +1,12 @@
 <resources>
     <string name="app_name">MultiCalendar</string>
-    <string name="gregorian">Gregorian</string>
-    <string name="hijri">Hijri</string>
-    <string name="ethiopian">Ethiopian</string>
     <string name="today">Today</string>
+    <string name="font_up">A+</string>
+    <string name="font_down">A-</string>
+    <string name="color">Color</string>
+    <string name="gregorian">Gregorian</string>
+    <string name="hijri">هجري</string>
+    <string name="ethiopian">ኢትዮጵያ</string>
     <string name="prev_month">Previous</string>
     <string name="next_month">Next</string>
-    <string name="font_up">A+</string>
-    <string name="font_down">A−</string>
-    <string name="color">Color</string>
-    <string name="settings">Settings</string>
 </resources>

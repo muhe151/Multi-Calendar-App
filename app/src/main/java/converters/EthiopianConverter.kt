@@ -9,8 +9,6 @@ object EthiopianConverter {
             "Meskerem", "Tikimt", "Hidar", "Tahsas", "Tir", "Yekatit",
             "Megabit", "Miazia", "Ginbot", "Sene", "Hamle", "Nehase", "Pagume"
         )
-        override fun toString(): String =
-            "$day ${monthNames[month - 1]} $year EC"
     }
 
     fun fromGregorian(cal: Calendar): EthiopianDate {
